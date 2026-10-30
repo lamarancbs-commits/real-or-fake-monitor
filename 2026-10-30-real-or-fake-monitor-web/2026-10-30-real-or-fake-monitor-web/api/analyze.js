@@ -38,12 +38,28 @@ Reply with only one JSON object, all text values in ${language}, short and plain
 markers: 0 to 4 visible cues, x and y are percent positions (0 to 100) of each cue on the image. If the image shows no food, set is_food to false and keep other fields brief.`;
 }
 
-function parseJson(text) {
+function parseJson(raw) {
+  const text = String(raw || "").replace(/```(?:json)?/gi, "").replace(/[“”]/g, '"').trim();
   try { return JSON.parse(text); } catch (e) {}
-  const a = text.indexOf("{");
-  const b = text.lastIndexOf("}");
-  if (a >= 0 && b > a) {
-    try { return JSON.parse(text.slice(a, b + 1)); } catch (e) {}
+  // Try every balanced {...} block and keep the first one that looks like our answer.
+  for (let start = text.indexOf("{"); start >= 0; start = text.indexOf("{", start + 1)) {
+    let depth = 0, inStr = false, esc = false;
+    for (let i = start; i < text.length; i++) {
+      const c = text[i];
+      if (inStr) { if (esc) esc = false; else if (c === "\\") esc = true; else if (c === '"') inStr = false; continue; }
+      if (c === '"') inStr = true;
+      else if (c === "{") depth++;
+      else if (c === "}") {
+        depth--;
+        if (depth === 0) {
+          try {
+            const obj = JSON.parse(text.slice(start, i + 1));
+            if (obj && (obj.verdict || obj.is_food !== undefined)) return obj;
+          } catch (e) {}
+          break;
+        }
+      }
+    }
   }
   return null;
 }
@@ -90,7 +106,7 @@ module.exports = async function handler(req, res) {
       },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: 900,
+        max_tokens: 1500,
         messages: [{
           role: "user",
           content: [
@@ -107,7 +123,10 @@ module.exports = async function handler(req, res) {
     const out = await r.json();
     const text = (out.content || []).filter(c => c.type === "text").map(c => c.text).join("");
     const data = parseJson(text);
-    if (!data) return res.status(502).json({ error: "parse" });
+    if (!data) {
+      console.error("parse", out.stop_reason, text.slice(0, 500));
+      return res.status(502).json({ error: "parse", stop: out.stop_reason || "", raw: text.slice(0, 500) });
+    }
     return res.status(200).json(clean(data));
   } catch (e) {
     console.error(e);
