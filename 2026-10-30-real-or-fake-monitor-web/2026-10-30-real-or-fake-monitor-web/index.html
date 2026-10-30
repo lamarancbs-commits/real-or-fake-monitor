@@ -156,7 +156,7 @@ let last=null,imgURL=null,stepTimer=null;
 
 function runSteps(){const box=$("steps");box.innerHTML="";const st=T[lang].steps;st.forEach(s=>{const d=document.createElement("div");d.className="step wait";d.innerHTML='<span class="ok"></span><span></span>';d.lastChild.textContent=s;box.append(d)});let i=0;const tick=()=>{const k=box.children;for(let j=0;j<k.length;j++){k[j].className="step "+(j<i?"done":j===i?"now":"wait");k[j].firstChild.textContent=j<i?"✓":j===i?"…":""}if(i<k.length-1)i++};tick();stepTimer=setInterval(tick,1300)}
 
-async function shrink(file){const bmp=await createImageBitmap(file).catch(()=>null);if(!bmp)return file;const m=1024,s=Math.min(1,m/Math.max(bmp.width,bmp.height));const c=document.createElement("canvas");c.width=Math.round(bmp.width*s);c.height=Math.round(bmp.height*s);c.getContext("2d").drawImage(bmp,0,0,c.width,c.height);return await new Promise(r=>c.toBlob(b=>r(b||file),"image/jpeg",.85))}
+async function shrink(file){const bmp=await createImageBitmap(file).catch(()=>null);if(!bmp)return file;const m=1400,s=Math.min(1,m/Math.max(bmp.width,bmp.height));const c=document.createElement("canvas");c.width=Math.round(bmp.width*s);c.height=Math.round(bmp.height*s);c.getContext("2d").drawImage(bmp,0,0,c.width,c.height);return await new Promise(r=>c.toBlob(b=>r(b||file),"image/jpeg",.85))}
 
 function str(buf,a,n){let s="";for(let i=0;i<n;i++){const c=buf.getUint8(a+i);if(!c)break;s+=String.fromCharCode(c)}return s.trim()}
 async function readMeta(file){const out={kind:"none",cam:""};try{const ab=await file.slice(0,Math.min(file.size,600000)).arrayBuffer();const u=new Uint8Array(ab);let txt="";for(let i=0;i<u.length;i++)txt+=String.fromCharCode(u[i]);
