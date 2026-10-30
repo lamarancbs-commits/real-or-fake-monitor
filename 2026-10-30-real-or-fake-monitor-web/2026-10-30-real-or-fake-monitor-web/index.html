@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Cek apakah foto menu makanan asli atau buatan AI.">
+<title>Real or Fake Monitor</title>
+<style>
+/* Layout: one glass card centered on a warm blurred ground, three states (home, scan, result) */
+@font-face{font-family:"Nexa";src:url("Nexa-ExtraLight.ttf") format("truetype");font-weight:200;font-display:swap}
+@font-face{font-family:"Nexa";src:url("Nexa-Heavy.ttf") format("truetype");font-weight:900;font-display:swap}
+@font-face{font-family:"Monimer";src:url("monimer.otf") format("opentype");font-display:swap}
+:root{
+  --ground:#ece5dd;--peach:#f2b88a;--rose:#efc6bd;--amber:#e4a062;
+  --ink:#141110;--ink-2:#4a3f3a;--glass:rgba(255,255,255,.36);--glass-edge:rgba(255,255,255,.62);--chip:rgba(255,255,255,.52);
+  --pill:#0d0d0d;--on-pill:#ffffff;--marker:#FCEE21;--on-marker:#1b1800;
+  --fake:#800020;--real:#2f6b2a;--ragu:#a3600f;--laser:#e2231a;
+  --display:"Monimer",Georgia,"Times New Roman",serif;--sans:"Nexa","Avenir Next","Segoe UI",system-ui,sans-serif;
+  color-scheme:light;
+}
+html,body{min-height:100%}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);font-weight:200;font-size:16px;line-height:1.45;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px;overflow-x:hidden}
+.blobs{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.blobs i{position:absolute;border-radius:50%;filter:blur(70px)}
+.wrap{position:relative;z-index:1;max-width:430px;margin:0 auto}
+.card{position:relative;border-radius:40px;background:var(--glass);border:1px solid var(--glass-edge);backdrop-filter:blur(26px);-webkit-backdrop-filter:blur(26px);box-shadow:0 30px 60px rgba(90,50,30,.12);padding:28px 24px 24px;min-height:calc(100dvh - 32px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;overflow:hidden}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.lab{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--ink-2)}
+.lang{display:flex;gap:6px}
+.lang button{font:900 12px var(--sans);border:0;border-radius:999px;padding:8px 13px;background:var(--chip);color:var(--ink);cursor:pointer}
+.lang button[aria-pressed="true"]{background:var(--pill);color:var(--on-pill)}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(44px,13vw,56px);line-height:1;margin-top:22px;text-wrap:balance}
+.h2{font-weight:900;font-size:22px;line-height:1.2;margin-top:10px;text-wrap:balance}
+.stat{margin-top:30px;max-width:150px;position:relative;z-index:2}
+.stat b{display:block;font-weight:900;font-size:32px;line-height:1.1}
+.stat small{display:block;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;margin-top:6px;color:var(--ink-2)}
+.hero-plate{position:absolute;width:260px;height:260px;right:-92px;top:330px;border-radius:50%;overflow:hidden;border:8px solid #f4efe6;box-shadow:0 30px 50px rgba(60,30,10,.32)}
+.spacer{flex:1;min-height:40px}
+.pill{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;height:70px;border:0;border-radius:999px;background:var(--pill);color:var(--on-pill);padding:0 9px 0 28px;font:900 18px var(--sans);cursor:pointer;box-shadow:0 18px 30px rgba(0,0,0,.22);position:relative;z-index:2}
+.pill:focus-visible,.lang button:focus-visible,.ghost:focus-visible{outline:3px solid var(--fake);outline-offset:3px}
+.pill .dot{width:52px;height:52px;border-radius:50%;background:var(--on-pill);display:grid;place-items:center;flex:none}
+.ghost{display:block;text-align:center;margin-top:12px;align-self:center;background:none;border:0;font:200 15px var(--sans);color:var(--ink);text-decoration:underline;text-underline-offset:4px;cursor:pointer;padding:6px}
+.note{font-size:13px;color:var(--ink-2);margin-top:14px}
+.photo{position:relative;margin:20px auto 0;width:100%;max-width:300px;aspect-ratio:1/1;border-radius:28px;overflow:hidden;box-shadow:0 26px 44px rgba(60,30,10,.28);background:#2a2321}
+.photo img{width:100%;height:100%;object-fit:cover;display:block}
+.laser{position:absolute;left:-4%;right:-4%;height:3px;background:var(--laser);box-shadow:0 0 18px 4px rgba(226,35,26,.55);top:0;animation:sweep 1.6s ease-in-out infinite alternate}
+@keyframes sweep{from{top:4%}to{top:95%}}
+@media (prefers-reduced-motion:reduce){.laser{animation:none;top:50%}}
+.steps{margin-top:22px;display:grid;gap:9px}
+.step{display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:20px;background:var(--chip);font-size:15px;transition:opacity .3s}
+.step .ok{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font:900 12px var(--sans);color:var(--on-pill);background:#b9aea8;flex:none}
+.step.done .ok{background:var(--pill)}
+.step.now .ok{background:#D05717}
+.step.wait{opacity:.5}
+.tag{position:absolute;transform:translate(-50%,-50%);background:var(--marker);color:var(--on-marker);font:900 12px var(--sans);padding:5px 10px;border-radius:999px;white-space:nowrap;max-width:70%;overflow:hidden;text-overflow:ellipsis;box-shadow:0 4px 10px rgba(0,0,0,.18)}
+.stamp{position:absolute;right:10px;top:14px;transform:rotate(-12deg);border:3px solid currentColor;font-family:var(--display);font-size:30px;line-height:1;padding:6px 14px 4px;border-radius:10px;background:rgba(255,255,255,.55)}
+.verdict{font-family:var(--display);font-size:38px;line-height:1.05;margin-top:22px;text-wrap:balance}
+.meter{display:flex;gap:6px;margin-top:16px}
+.meter span{flex:1;height:8px;border-radius:9px;background:rgba(0,0,0,.12)}
+.meta{display:flex;justify-content:space-between;gap:10px;margin-top:8px;font-size:13px;color:var(--ink-2)}
+.box{border-radius:24px;background:var(--chip);padding:16px 18px;margin-top:12px}
+.box h3{font:900 15px var(--sans);margin-bottom:4px}
+.box p{font-size:14px}
+.theory{background:rgba(128,0,32,.08)}
+.theory q{display:block;font-family:var(--display);font-size:22px;line-height:1.22;margin-top:6px;quotes:none}
+.theory small{display:block;font-size:12px;margin-top:6px;color:var(--ink-2)}
+.err{color:var(--ink-2);font-size:13px;margin-top:8px}
+.example{display:inline-block;font:900 11px var(--sans);letter-spacing:1.5px;text-transform:uppercase;background:var(--pill);color:var(--on-pill);padding:5px 10px;border-radius:999px;margin-top:14px}
+.sticky{position:sticky;bottom:0;padding-top:16px;margin-top:auto}
+[hidden]{display:none!important}
+*,*::before,*::after{box-sizing:border-box}
+.cover{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:3;font-size:100px}
+.pill:focus-within,.ghost:focus-within{outline:3px solid var(--fake);outline-offset:3px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);opacity:0}
+</style>
+</head>
+<body>
+
+<div class="blobs" aria-hidden="true"><i style="width:360px;height:360px;background:var(--peach);left:-110px;top:45%"></i><i style="width:320px;height:320px;background:var(--rose);right:-100px;top:2%"></i><i style="width:280px;height:280px;background:var(--amber);right:-70px;bottom:-60px;opacity:.8"></i></div>
+
+<main class="wrap">
+
+  <section class="card" id="home">
+    <div class="top"><span class="lab">Real or Fake Monitor</span><div class="lang"><button id="b-id" aria-pressed="true">ID</button><button id="b-en" aria-pressed="false">EN</button></div></div>
+    <h1 data-t="h1"></h1>
+    <p class="h2" data-t="sub"></p>
+    <div class="stat"><span class="lab" data-t="only"></span><b>13%</b><span data-t="stat"></span><small>Ipsos, 2026</small></div>
+    <div class="hero-plate" id="plate1"></div>
+    <div class="spacer"></div>
+    <div class="pill" id="go"><input id="file" class="cover" type="file" accept="image/*" capture="environment" aria-label="Pindai foto menu"><span data-t="scan"></span><span class="dot"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="4"/></svg></span></div>
+    <div class="ghost" style="position:relative"><input id="gallery" class="cover" type="file" accept="image/*" aria-label="Pilih screenshot"><span data-t="pick"></span></div>
+  </section>
+
+  <section class="card" id="scan" hidden>
+    <div class="top"><span class="lab" data-t="scanning"></span></div>
+    <p class="h2" data-t="checking"></p>
+    <div class="photo"><img id="scanimg" alt=""><div class="laser"></div></div>
+    <div class="steps" id="steps"></div>
+  </section>
+
+  <section class="card" id="result" hidden>
+    <div class="top"><span class="lab" data-t="result"></span><span class="lab" id="srcnote"></span></div>
+    <div class="photo" id="rphoto"><img id="resimg" alt=""></div>
+    <div id="exampleTag"></div>
+    <p class="err" id="err" hidden></p>
+    <p class="verdict" id="vtext"></p>
+    <div class="meter" id="meter"><span></span><span></span><span></span></div>
+    <div class="meta"><span id="lvl"></span><span id="conf"></span></div>
+    <div class="box" id="reasonBox"><h3 data-t="why"></h3><p id="reason"></p></div>
+    <div class="box"><h3>Swap Test</h3><p id="swap"></p></div>
+    <div class="box" id="metaBox"><h3 data-t="metaT"></h3><p id="metaP"></p></div>
+    <p class="lab" style="margin-top:22px" data-t="tips"></p>
+    <div class="box"><h3 data-t="buyer"></h3><p id="buyer"></p></div>
+    <div class="box"><h3 data-t="owner"></h3><p id="owner"></p></div>
+    <div class="box theory"><span class="lab" style="font-size:11px" data-t="theoryT"></span><q data-t="theoryQ"></q><small>Dramaturgi, Goffman (1959)</small></div>
+    <p class="note" id="limit"></p>
+    <div class="sticky"><button class="pill" id="again"><span data-t="again"></span><span class="dot"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.4" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span></button></div>
+  </section>
+</main>
+
+<template id="food"><svg viewBox="0 0 200 200" width="100%" height="100%" aria-hidden="true"><circle cx="100" cy="100" r="99" fill="#1f1a18"/><circle cx="100" cy="100" r="86" fill="#f4efe6"/><ellipse cx="78" cy="112" rx="40" ry="34" fill="#fbfaf6"/><path d="M110 60c26-6 50 10 48 36-2 22-22 34-44 30-20-4-32-18-28-38 2-14 12-25 24-28z" fill="#c9852f"/><path d="M118 70c16-2 30 8 28 24" stroke="#a8641c" stroke-width="5" fill="none" stroke-linecap="round"/><ellipse cx="124" cy="96" rx="26" ry="14" fill="#c7261b" opacity=".92"/><circle cx="116" cy="92" r="3" fill="#ff8a5c"/><circle cx="130" cy="99" r="2.5" fill="#ff8a5c"/><path d="M48 66c8-8 20-6 22 4" stroke="#4d8b31" stroke-width="7" fill="none" stroke-linecap="round"/><ellipse cx="66" cy="148" rx="14" ry="7" fill="#86b84b"/><ellipse cx="88" cy="154" rx="10" ry="6" fill="#d9e8b8"/></svg></template>
+
+<script>
+const T={
+ id:{h1:"Asli atau AI?",sub:"Cek foto menu sebelum pesan.",only:"Hanya",stat:"orang yakin bisa mengenali iklan buatan AI",scan:"Pindai foto menu",pick:"atau pilih screenshot GoFood / GrabFood",scanning:"Memindai",checking:"Sedang memeriksa fotomu",
+  steps:["Tekstur permukaan","Cahaya dan bayangan","Latar dan uap","Porsi dan piring"],result:"Hasil",why:"Kenapa",metaT:"Data di dalam file",tips:"Saran",buyer:"Kalau kamu pembeli",owner:"Kalau kamu pemilik UMKM",
+  theoryT:"Teori di baliknya",theoryQ:"Foto menu adalah panggung depan. Makanan yang datang adalah panggung belakang.",again:"Pindai foto lain",
+  v:{fake:"Kemungkinan buatan AI",real:"Terlihat seperti foto asli",ragu:"Belum bisa dipastikan",notfood:"Ini bukan foto makanan"},st:{fake:"Fake",real:"Real",ragu:"Ragu"},
+  lvl:n=>"Level "+n+" dari 3",conf:c=>"Keyakinan: "+c,cl:{low:"rendah",medium:"sedang",high:"tinggi"},
+  limit:"Alat bantu literasi visual, bukan detektor pasti. AI bisa salah, terutama menuduh foto asli. Keputusan akhir tetap di kamu. Foto tidak disimpan. Analisis memakai model AI Claude dari Anthropic.",
+  ex:"Contoh hasil",busy:"Batas analisis hari ini sudah tercapai. Yang tampil di bawah adalah contoh hasil, bukan analisis fotomu. Coba lagi besok.",fail:"Analisis sedang tidak tersedia. Yang tampil di bawah adalah contoh hasil, bukan analisis fotomu. Coba lagi sebentar lagi.",
+  m:{ai:"File ini membawa penanda resmi gambar buatan AI (Content Credentials atau IPTC). Ini tanda kuat.",c2pa:"File ini membawa Content Credentials. Riwayat pembuatannya tercatat di dalam file.",cam:c=>"Ada data kamera: "+c+". Foto langsung dari kamera biasanya membawa data ini.",none:"Tidak ada data kamera. Ini wajar untuk screenshot atau foto yang sudah diunggah ulang, jadi tidak membuktikan apa pun."}},
+ en:{h1:"Real or AI?",sub:"Check the menu photo before you order.",only:"Only",stat:"of people feel confident spotting AI-made ads",scan:"Scan a menu photo",pick:"or choose a delivery-app screenshot",scanning:"Scanning",checking:"Checking your photo",
+  steps:["Surface texture","Light and shadow","Background and steam","Portion and plate"],result:"Result",why:"Why",metaT:"Data inside the file",tips:"Tips",buyer:"If you are the buyer",owner:"If you run the food stall",
+  theoryT:"The theory behind it",theoryQ:"The menu photo is the front stage. The food that arrives is the back stage.",again:"Scan another photo",
+  v:{fake:"Likely made by AI",real:"Looks like a real photo",ragu:"Can't tell for sure",notfood:"This isn't a food photo"},st:{fake:"Fake",real:"Real",ragu:"Unsure"},
+  lvl:n=>"Level "+n+" of 3",conf:c=>"Confidence: "+c,cl:{low:"low",medium:"medium",high:"high"},
+  limit:"A visual literacy aid, not a definitive detector. AI can be wrong, most often by flagging real photos. The final call is yours. Photos are not stored. Analysis uses the Claude AI model by Anthropic.",
+  ex:"Example result",busy:"Today's analysis limit has been reached. Below is an example result, not an analysis of your photo. Try again tomorrow.",fail:"Analysis is unavailable right now. Below is an example result, not an analysis of your photo. Try again shortly.",
+  m:{ai:"This file carries an official AI-generated marker (Content Credentials or IPTC). That's a strong signal.",c2pa:"This file carries Content Credentials. Its creation history is recorded inside the file.",cam:c=>"Camera data found: "+c+". Photos straight from a camera usually carry this.",none:"No camera data. That's normal for screenshots and re-uploaded photos, so it proves nothing either way."}}
+};
+const EXAMPLE={id:{verdict:"ragu",confidence:"low",level:2,markers:[{label:"kuning telur seragam",x:66,y:28},{label:"bawang goreng tertata rapi",x:42,y:38},{label:"tauge menyatu",x:68,y:68}],reason:"Kuning telur mulus dan seragam, bawang goreng tersusun seperti mahkota, dan beberapa helai tauge tampak menyatu. Tanda ini bisa berasal dari AI, tapi juga bisa dari food styling profesional.",swap_test:"Foto ini bisa dipakai warung soto mana saja. Tidak ada mangkuk, meja, atau ciri khas satu toko.",buyer_tip:"Bandingkan dengan foto ulasan pembeli, terutama warna kuah dan isi mangkuknya.",owner_tip:"Foto soto pakai HP dekat jendela, di mangkuk asli tokomu, lengkap dengan pelengkapnya."},
+ en:{verdict:"ragu",confidence:"low",level:2,markers:[{label:"very uniform yolks",x:72,y:28},{label:"neatly piled shallots",x:42,y:38},{label:"merging bean sprouts",x:68,y:68}],reason:"The yolks are smooth and identical, the fried shallots sit like a crown, and some bean sprouts seem to merge. These can come from AI, but also from professional food styling.",swap_test:"Any soto stall could use this photo. Nothing in the bowl or table belongs to one specific shop.",buyer_tip:"Compare it with buyers' review photos, especially the broth color and what is in the bowl.",owner_tip:"Shoot your soto with a phone near a window, in your shop's own bowl, with its side dishes."}};
+let lang="id";
+try{const s=localStorage.getItem("rofm-lang");if(s==="en"||s==="id")lang=s}catch(e){}
+const $=id=>document.getElementById(id);
+const food='<img src="soto.jpg" alt="" style="width:100%;height:100%;object-fit:cover;display:block">';$("plate1").innerHTML=food;
+function paint(){const t=T[lang];document.documentElement.lang=lang;document.querySelectorAll("[data-t]").forEach(el=>{const v=t[el.dataset.t];if(typeof v==="string")el.textContent=v});$("b-id").setAttribute("aria-pressed",lang==="id");$("b-en").setAttribute("aria-pressed",lang==="en");$("limit").textContent=t.limit;if(last)render(last)}
+function setLang(l){lang=l;try{localStorage.setItem("rofm-lang",l)}catch(e){}paint()}
+$("b-id").onclick=()=>setLang("id");$("b-en").onclick=()=>setLang("en");
+function show(id){["home","scan","result"].forEach(s=>$(s).hidden=s!==id);window.scrollTo(0,0)}
+$("again").onclick=()=>{last=null;show("home")};
+$("file").onchange=e=>handle(e.target);$("gallery").onchange=e=>handle(e.target);
+
+let last=null,imgURL=null,stepTimer=null;
+
+function runSteps(){const box=$("steps");box.innerHTML="";const st=T[lang].steps;st.forEach(s=>{const d=document.createElement("div");d.className="step wait";d.innerHTML='<span class="ok"></span><span></span>';d.lastChild.textContent=s;box.append(d)});let i=0;const tick=()=>{const k=box.children;for(let j=0;j<k.length;j++){k[j].className="step "+(j<i?"done":j===i?"now":"wait");k[j].firstChild.textContent=j<i?"✓":j===i?"…":""}if(i<k.length-1)i++};tick();stepTimer=setInterval(tick,1300)}
+
+async function shrink(file){const bmp=await createImageBitmap(file).catch(()=>null);if(!bmp)return file;const m=1024,s=Math.min(1,m/Math.max(bmp.width,bmp.height));const c=document.createElement("canvas");c.width=Math.round(bmp.width*s);c.height=Math.round(bmp.height*s);c.getContext("2d").drawImage(bmp,0,0,c.width,c.height);return await new Promise(r=>c.toBlob(b=>r(b||file),"image/jpeg",.85))}
+
+function str(buf,a,n){let s="";for(let i=0;i<n;i++){const c=buf.getUint8(a+i);if(!c)break;s+=String.fromCharCode(c)}return s.trim()}
+async function readMeta(file){const out={kind:"none",cam:""};try{const ab=await file.slice(0,Math.min(file.size,600000)).arrayBuffer();const u=new Uint8Array(ab);let txt="";for(let i=0;i<u.length;i++)txt+=String.fromCharCode(u[i]);
+ if(/trainedAlgorithmicMedia|compositeWithTrainedAlgorithmicMedia/.test(txt))out.kind="ai";else if(/c2pa|jumb/i.test(txt))out.kind="c2pa";
+ const ex=txt.indexOf("Exif\0\0");if(ex>=0){const dv=new DataView(ab);const t=ex+6;const le=str(dv,t,2)==="II";const g16=o=>dv.getUint16(o,le),g32=o=>dv.getUint32(o,le);const ifd=t+g32(t+4);const n=g16(ifd);let mk="",md="";for(let i=0;i<n;i++){const e=ifd+2+i*12,tag=g16(e),cnt=g32(e+4);if(tag===0x10F||tag===0x110){const off=cnt>4?t+g32(e+8):e+8;const v=str(dv,off,Math.min(cnt,40));if(tag===0x10F)mk=v;else md=v}}const cam=[mk,md].filter(Boolean).join(" ");if(cam){out.cam=cam;if(out.kind==="none")out.kind="cam"}}}catch(e){}return out}
+
+async function handle(input){const f=input.files&&input.files[0];input.value="";if(!f)return;if(imgURL)URL.revokeObjectURL(imgURL);imgURL=URL.createObjectURL(f);$("scanimg").src=imgURL;$("resimg").src=imgURL;show("scan");runSteps();$("err").hidden=true;
+ const meta=await readMeta(f);let data=null,mode="live",msg="";
+ try{const small=await shrink(f);const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(",")[1]);r.onerror=rej;r.readAsDataURL(small)});
+  const resp=await fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({image:b64,lang,meta})});
+  if(resp.status===429){mode="example";msg=T[lang].busy}else if(!resp.ok){throw new Error("http "+resp.status)}else{data=await resp.json()}
+ }catch(e){mode="example";msg=T[lang].fail}
+ clearInterval(stepTimer);if(!data||typeof data!=="object"){data=null}
+ last={data,meta,mode,msg};render(last);show("result")}
+
+function render(st){const t=T[lang];const ex=st.mode==="example";const d=ex?EXAMPLE[lang]:st.data;
+ const ph=$("rphoto");ph.querySelectorAll(".tag,.stamp").forEach(n=>n.remove());
+ if(ex){ph.querySelector("img").hidden=true;if(!ph.querySelector(".exsvg")){const s=document.createElement("div");s.className="exsvg";s.style.cssText="width:100%;height:100%";s.innerHTML=food;ph.prepend(s)}}else{ph.querySelector("img").hidden=false;const s=ph.querySelector(".exsvg");if(s)s.remove()}
+ $("exampleTag").innerHTML=ex?'<span class="example"></span>':"";if(ex)$("exampleTag").firstChild.textContent=t.ex;
+ const v=d.is_food===false?"notfood":(["fake","real","ragu"].includes(d.verdict)?d.verdict:"ragu");
+ $("vtext").textContent=t.v[v];
+ if(v!=="notfood"){const sp=document.createElement("div");sp.className="stamp";sp.textContent=t.st[v];sp.style.color=v==="fake"?"var(--fake)":v==="real"?"var(--real)":"var(--ragu)";ph.append(sp)}
+ (Array.isArray(d.markers)?d.markers.slice(0,4):[]).forEach((m,i)=>{const x=Math.max(26,Math.min(70,+m.x||50)),y=Math.max(8,Math.min(92,+m.y||50));const g=document.createElement("span");g.className="tag";g.style.left=x+"%";g.style.top=y+"%";g.textContent=(i+1)+" "+String(m.label||"");ph.append(g)});
+ const lv=[1,2,3].includes(+d.level)?+d.level:2;const col=v==="fake"?"var(--fake)":v==="real"?"var(--real)":"var(--ragu)";[...$("meter").children].forEach((s,i)=>s.style.background=i===lv-1&&v!=="notfood"?col:"rgba(0,0,0,.12)");
+ $("lvl").textContent=v==="notfood"?"":t.lvl(lv);$("conf").textContent=t.conf(t.cl[d.confidence]||t.cl.medium);
+ $("reason").textContent=String(d.reason||"");$("swap").textContent=String(d.swap_test||"");$("buyer").textContent=String(d.buyer_tip||"");$("owner").textContent=String(d.owner_tip||"");
+ const mk=st.meta.kind;$("metaP").textContent=mk==="ai"?t.m.ai:mk==="c2pa"?t.m.c2pa:mk==="cam"?t.m.cam(st.meta.cam):t.m.none;$("metaBox").hidden=ex;
+ $("srcnote").textContent="";
+ const er=$("err");if(st.msg){er.hidden=false;er.textContent=st.msg}else er.hidden=true}
+paint();
+</script>
+
+</body>
+</html>
