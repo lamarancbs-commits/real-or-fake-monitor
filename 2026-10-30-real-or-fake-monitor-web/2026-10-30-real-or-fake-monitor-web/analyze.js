@@ -44,14 +44,28 @@ PEOPLE AND ANIMALS: plastic or airbrushed skin; exaggerated grins and winks; han
 TEXT AND LAYOUT: misspellings or doubled letters (for example "Dubay", "Enakk"); decorative Japanese, Korean or Chinese text that does not fit the stall; garbled small print; generic AI slogans ("Premium Taste, Made with Passion", "Made with love", "Fresh ingredients") with rows of round icon badges; the same template, props and backgrounds repeated across panels; brand logos or jars that are slightly wrong.
 CONTEXT: since 2024 many Indonesian stalls print AI-generated posters. A highly polished, studio-like poster for a small stall with no sign of real photography is more likely fake than real.
 
-Rules:
-1. Answer "fake" if you can name at least one concrete cue from the list above, in the food, people or text. List the strongest cues in markers.
-2. Answer "real" only when the food looks like genuine photography (natural imperfections, real plates and tables, lighting consistent with a real place) and there is no AI cue in the people or text.
-3. Camera metadata only proves the photo was taken with a phone. If the image shows a poster, banner, menu board or screen, ignore the metadata. Use it as a hint toward "real" only for a direct photo of a dish on a table.
+Fill in this checklist honestly. Mark a cue true only if you can actually see it in the image.
+CHECKS (true or false):
+grid_identical: several food items rendered at the same angle and lighting, like copies in a grid
+too_uniform: shapes too perfect or identical (bead-like rice, same-length fries, identical mochi or coins, fruit as perfect spheres)
+frozen_floating: sauce or chocolate pours frozen mid-air, floating leaves, splashes or ingredients
+waxy_surface: glossy, waxy or airbrushed food with no crumbs, smears or uneven browning
+painted_light: steam, glow or bokeh that looks painted rather than photographed
+odd_hands: hands with wrong finger count, merged fingers, odd nails or impossible grip
+plastic_faces: people or animals with plastic skin, exaggerated grins or winks, uncanny mascots
+misspelling: misspelled, doubled or garbled words or small print
+foreign_script: decorative Japanese, Korean or Chinese text that does not fit the stall
+generic_badges: generic slogans with rows of round icon badges
+repeated_template: the same template, props or background repeated across panels
+wrong_details: logos, jars, utensils or objects that are slightly wrong, or impossible geometry or lighting
+Also report:
+medium: "dish_photo" (a dish photographed directly), "poster" (photo of a printed menu, poster, banner, light box or screen) or "screenshot" (screenshot of an app)
+real_evidence: true only if the food shows clear signs of genuine photography (natural imperfections, real plates and tables, light consistent with a real place)
+Camera metadata only proves a phone took the photo. For posters, banners, menu boards or screens, ignore it.
 File metadata found by the page: ${metaLine}.
 Reply with only one JSON object, all text values in ${language}, short and plain:
-{"is_food":true,"verdict":"fake|real","confidence":"low|medium|high","level":1,"markers":[{"label":"2 to 4 words naming the cue","x":0,"y":0}],"reason":"one or two sentences naming what you see","swap_test":"one sentence: could any other stall use this exact photo without anyone noticing, and why","buyer_tip":"one sentence","owner_tip":"one sentence"}
-markers: for "fake" give 1 to 4 concrete cues (they can point at food, a face, a hand or a piece of text); for "real" give 0 to 3 cues that show it is genuine (for example "uap alami", "remah di meja"); x and y are percent positions (0 to 100) of each cue on the image. If the image shows no food, set is_food to false and keep other fields brief.`;
+{"is_food":true,"medium":"poster","real_evidence":false,"checks":{"grid_identical":false,"too_uniform":false,"frozen_floating":false,"waxy_surface":false,"painted_light":false,"odd_hands":false,"plastic_faces":false,"misspelling":false,"foreign_script":false,"generic_badges":false,"repeated_template":false,"wrong_details":false},"markers":[{"label":"2 to 4 words naming the cue","x":0,"y":0}],"reason":"one or two sentences naming what you see","layout_font":"one or two sentences on the layout and typography: fonts, spelling, decorative scripts, slogans, icon badges, repeated templates, and whether they look AI-made or designed by a person; if there is no text or layout in the image, say so","swap_test":"one sentence: could any other stall use this exact photo without anyone noticing, and why","buyer_tip":"one sentence","owner_tip":"one sentence"}
+markers: up to 4 positions of the strongest cues you marked true, or of signs of genuine photography if none; x and y are percent positions (0 to 100) on the image. If the image shows no food, set is_food to false and keep other fields brief.`;
 }
 
 function parseJson(raw) {
@@ -70,7 +84,7 @@ function parseJson(raw) {
         if (depth === 0) {
           try {
             const obj = JSON.parse(text.slice(start, i + 1));
-            if (obj && (obj.verdict || obj.is_food !== undefined)) return obj;
+            if (obj && (obj.checks || obj.verdict || obj.is_food !== undefined)) return obj;
           } catch (e) {}
           break;
         }
@@ -80,19 +94,37 @@ function parseJson(raw) {
   return null;
 }
 
+const CHECK_KEYS = ["grid_identical","too_uniform","frozen_floating","waxy_surface","painted_light","odd_hands","plastic_faces","misspelling","foreign_script","generic_badges","repeated_template","wrong_details"];
+
+// The verdict is computed here from the checklist, not taken from the model.
 function clean(d) {
   const s = (v, n) => String(v || "").slice(0, n);
+  const raw = d.checks && typeof d.checks === "object" ? d.checks : {};
+  const checks = {};
+  CHECK_KEYS.forEach(k => { checks[k] = raw[k] === true; });
+  const count = CHECK_KEYS.filter(k => checks[k]).length;
+  const medium = ["dish_photo", "poster", "screenshot"].includes(d.medium) ? d.medium : "dish_photo";
+  const realEvidence = d.real_evidence === true;
+
+  let verdict, level, confidence, rule;
+  if (count >= 3) { verdict = "fake"; level = 3; rule = "3+"; }
+  else if (count >= 1) { verdict = "fake"; level = 2; rule = "1-2"; }
+  else if (medium !== "dish_photo" && !realEvidence) { verdict = "fake"; level = 2; rule = "poster"; }
+  else { verdict = "real"; level = 1; rule = "0"; }
+  if (verdict === "fake") confidence = count >= 5 ? "high" : count >= 3 ? "medium" : "low";
+  else confidence = realEvidence ? "high" : "medium";
+
   return {
     is_food: d.is_food !== false,
-    verdict: d.verdict === "fake" ? "fake" : "real",
-    confidence: ["low", "medium", "high"].includes(d.confidence) ? d.confidence : "medium",
-    level: d.verdict === "fake" ? (Number(d.level) === 3 ? 3 : 2) : 1,
+    verdict, level, confidence, rule, medium, real_evidence: realEvidence,
+    checks, check_count: count, check_total: CHECK_KEYS.length,
     markers: (Array.isArray(d.markers) ? d.markers : []).slice(0, 4).map(m => ({
       label: s(m && m.label, 40),
       x: Math.max(0, Math.min(100, Number(m && m.x) || 50)),
       y: Math.max(0, Math.min(100, Number(m && m.y) || 50)),
     })),
     reason: s(d.reason, 400),
+    layout_font: s(d.layout_font, 400),
     swap_test: s(d.swap_test, 300),
     buyer_tip: s(d.buyer_tip, 250),
     owner_tip: s(d.owner_tip, 250),

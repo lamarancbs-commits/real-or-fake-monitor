@@ -64,6 +64,11 @@ h1{font-family:var(--display);font-weight:400;font-size:clamp(44px,13vw,56px);li
 .theory{background:rgba(128,0,32,.08)}
 .theory q{display:block;font-family:var(--display);font-size:22px;line-height:1.22;margin-top:6px;quotes:none}
 .theory small{display:block;font-size:12px;margin-top:6px;color:var(--ink-2)}
+.cl{list-style:none;padding:0;margin-top:8px;display:grid;gap:4px;font-size:14px}
+.cl li{display:flex;gap:10px;align-items:baseline;color:var(--ink-2)}
+.cl li b{width:16px;flex:none;text-align:center;font-weight:900}
+.cl li.on{color:var(--ink);font-weight:900}
+.cl li.on b{color:var(--fake)}
 .err{color:var(--ink-2);font-size:13px;margin-top:8px}
 .example{display:inline-block;font:900 11px var(--sans);letter-spacing:1.5px;text-transform:uppercase;background:var(--pill);color:var(--on-pill);padding:5px 10px;border-radius:999px;margin-top:14px}
 .sticky{position:sticky;bottom:0;padding-top:16px;margin-top:auto}
@@ -106,7 +111,9 @@ h1{font-family:var(--display);font-weight:400;font-size:clamp(44px,13vw,56px);li
     <p class="verdict" id="vtext"></p>
     <div class="meter" id="meter"><span></span><span></span><span></span></div>
     <div class="meta"><span id="lvl"></span><span id="conf"></span></div>
+    <div class="box" id="checkBox"><h3 id="checkT"></h3><p id="checkNote" class="note" style="margin-top:2px"></p><ul class="cl" id="checkList"></ul></div>
     <div class="box" id="reasonBox"><h3 data-t="why"></h3><p id="reason"></p></div>
+    <div class="box"><h3 data-t="layoutT"></h3><p id="layout"></p></div>
     <div class="box"><h3>Swap Test</h3><p id="swap"></p></div>
     <div class="box" id="metaBox"><h3 data-t="metaT"></h3><p id="metaP"></p></div>
     <p class="lab" style="margin-top:22px" data-t="tips"></p>
@@ -123,7 +130,8 @@ h1{font-family:var(--display);font-weight:400;font-size:clamp(44px,13vw,56px);li
 <script>
 const T={
  id:{h1:"Asli atau AI?",sub:"Cek foto menu sebelum pesan.",only:"Hanya",stat:"orang yakin bisa mengenali iklan buatan AI",scan:"Pindai foto menu",pick:"atau pilih screenshot GoFood / GrabFood",scanning:"Memindai",checking:"Sedang memeriksa fotomu",
-  steps:["Tekstur permukaan","Cahaya dan bayangan","Latar dan uap","Porsi dan piring"],result:"Hasil",why:"Kenapa",metaT:"Data di dalam file",tips:"Saran",buyer:"Kalau kamu pembeli",owner:"Kalau kamu pemilik UMKM",
+  steps:["Tekstur permukaan","Cahaya dan bayangan","Latar dan uap","Porsi dan piring","Layout dan font"],result:"Hasil",layoutT:"Layout dan font",checkT:(n,t)=>n+" dari "+t+" ciri AI terdeteksi",posterNote:"Tidak ada ciri yang menonjol, tapi ini poster bergaya studio tanpa bukti foto asli, jadi dinilai Fake.",rule:"Aturan: 0 ciri = Real, 1 sampai 2 = Fake Level 2, 3 atau lebih = Fake Level 3.",
+  cks:{grid_identical:"Item seragam dalam grid",too_uniform:"Bentuk terlalu sempurna atau kembar",frozen_floating:"Tuangan membeku atau bahan melayang",waxy_surface:"Permukaan licin seperti lilin",painted_light:"Uap atau cahaya seperti dilukis",odd_hands:"Tangan atau jari janggal",plastic_faces:"Wajah atau maskot seperti plastik",misspelling:"Salah eja atau tulisan rusak",foreign_script:"Aksara asing dekoratif",generic_badges:"Slogan generik dan deretan ikon",repeated_template:"Template berulang antar panel",wrong_details:"Detail atau logo janggal"},why:"Kenapa",metaT:"Data di dalam file",tips:"Saran",buyer:"Kalau kamu pembeli",owner:"Kalau kamu pemilik UMKM",
   theoryT:"Teori di baliknya",theoryQ:"Foto menu adalah panggung depan. Makanan yang datang adalah panggung belakang.",again:"Pindai foto lain",
   v:{fake:"Kemungkinan buatan AI",fake2:"Foto sudah banyak dipoles atau diedit",real:"Terlihat seperti foto asli",ragu:"Belum bisa dipastikan",notfood:"Ini bukan foto makanan"},st:{fake:"Fake",real:"Real",ragu:"Ragu"},
   lvl:n=>"Level "+n+" dari 3",conf:c=>"Keyakinan: "+c,cl:{low:"rendah",medium:"sedang",high:"tinggi"},
@@ -131,7 +139,8 @@ const T={
   ex:"Contoh hasil",busy:"Batas analisis hari ini sudah tercapai. Yang tampil di bawah adalah contoh hasil, bukan analisis fotomu. Coba lagi besok.",fail:"Analisis sedang tidak tersedia. Yang tampil di bawah adalah contoh hasil, bukan analisis fotomu. Coba lagi sebentar lagi.",
   m:{ai:"File ini membawa penanda resmi gambar buatan AI (Content Credentials atau IPTC). Ini tanda kuat.",c2pa:"File ini membawa Content Credentials. Riwayat pembuatannya tercatat di dalam file.",cam:c=>"Ada data kamera: "+c+". Foto langsung dari kamera biasanya membawa data ini.",none:"Tidak ada data kamera. Ini wajar untuk screenshot atau foto yang sudah diunggah ulang, jadi tidak membuktikan apa pun."}},
  en:{h1:"Real or AI?",sub:"Check the menu photo before you order.",only:"Only",stat:"of people feel confident spotting AI-made ads",scan:"Scan a menu photo",pick:"or choose a delivery-app screenshot",scanning:"Scanning",checking:"Checking your photo",
-  steps:["Surface texture","Light and shadow","Background and steam","Portion and plate"],result:"Result",why:"Why",metaT:"Data inside the file",tips:"Tips",buyer:"If you are the buyer",owner:"If you run the food stall",
+  steps:["Surface texture","Light and shadow","Background and steam","Portion and plate","Layout and fonts"],result:"Result",layoutT:"Layout and fonts",checkT:(n,t)=>n+" of "+t+" AI signs detected",posterNote:"No single sign stands out, but this is a studio-style poster with no proof of real photography, so it is rated Fake.",rule:"Rule: 0 signs = Real, 1 to 2 = Fake Level 2, 3 or more = Fake Level 3.",
+  cks:{grid_identical:"Identical items in a grid",too_uniform:"Shapes too perfect or identical",frozen_floating:"Frozen pours or floating ingredients",waxy_surface:"Waxy, glossy surface",painted_light:"Painted-looking steam or light",odd_hands:"Odd hands or fingers",plastic_faces:"Plastic faces or mascots",misspelling:"Misspelled or garbled text",foreign_script:"Decorative foreign script",generic_badges:"Generic slogans and icon badges",repeated_template:"Template repeated across panels",wrong_details:"Odd details or logos"},why:"Why",metaT:"Data inside the file",tips:"Tips",buyer:"If you are the buyer",owner:"If you run the food stall",
   theoryT:"The theory behind it",theoryQ:"The menu photo is the front stage. The food that arrives is the back stage.",again:"Scan another photo",
   v:{fake:"Likely made by AI",fake2:"Heavily edited or retouched photo",real:"Looks like a real photo",ragu:"Can't tell for sure",notfood:"This isn't a food photo"},st:{fake:"Fake",real:"Real",ragu:"Unsure"},
   lvl:n=>"Level "+n+" of 3",conf:c=>"Confidence: "+c,cl:{low:"low",medium:"medium",high:"high"},
@@ -139,8 +148,8 @@ const T={
   ex:"Example result",busy:"Today's analysis limit has been reached. Below is an example result, not an analysis of your photo. Try again tomorrow.",fail:"Analysis is unavailable right now. Below is an example result, not an analysis of your photo. Try again shortly.",
   m:{ai:"This file carries an official AI-generated marker (Content Credentials or IPTC). That's a strong signal.",c2pa:"This file carries Content Credentials. Its creation history is recorded inside the file.",cam:c=>"Camera data found: "+c+". Photos straight from a camera usually carry this.",none:"No camera data. That's normal for screenshots and re-uploaded photos, so it proves nothing either way."}}
 };
-const EXAMPLE={id:{verdict:"fake",confidence:"low",level:2,markers:[{label:"kuning telur seragam",x:66,y:28},{label:"bawang goreng tertata rapi",x:42,y:38},{label:"tauge menyatu",x:68,y:68}],reason:"Kuning telur mulus dan seragam, bawang goreng tersusun seperti mahkota, dan beberapa helai tauge tampak menyatu. Foto ini sudah jauh dari tampilan soto yang biasa diterima pembeli.",swap_test:"Foto ini bisa dipakai warung soto mana saja. Tidak ada mangkuk, meja, atau ciri khas satu toko.",buyer_tip:"Bandingkan dengan foto ulasan pembeli, terutama warna kuah dan isi mangkuknya.",owner_tip:"Foto soto pakai HP dekat jendela, di mangkuk asli tokomu, lengkap dengan pelengkapnya."},
- en:{verdict:"fake",confidence:"low",level:2,markers:[{label:"very uniform yolks",x:72,y:28},{label:"neatly piled shallots",x:42,y:38},{label:"merging bean sprouts",x:68,y:68}],reason:"The yolks are smooth and identical, the fried shallots sit like a crown, and some bean sprouts seem to merge. The photo no longer looks like the soto a buyer would receive.",swap_test:"Any soto stall could use this photo. Nothing in the bowl or table belongs to one specific shop.",buyer_tip:"Compare it with buyers' review photos, especially the broth color and what is in the bowl.",owner_tip:"Shoot your soto with a phone near a window, in your shop's own bowl, with its side dishes."}};
+const EXAMPLE={id:{checks:{too_uniform:true,waxy_surface:true},verdict:"fake",confidence:"low",level:2,markers:[{label:"kuning telur seragam",x:66,y:28},{label:"bawang goreng tertata rapi",x:42,y:38},{label:"tauge menyatu",x:68,y:68}],reason:"Kuning telur mulus dan seragam, bawang goreng tersusun seperti mahkota, dan beberapa helai tauge tampak menyatu. Foto ini sudah jauh dari tampilan soto yang biasa diterima pembeli.",layout_font:"Tidak ada teks atau tata letak menu di foto ini, jadi penilaian hanya dari makanannya.",swap_test:"Foto ini bisa dipakai warung soto mana saja. Tidak ada mangkuk, meja, atau ciri khas satu toko.",buyer_tip:"Bandingkan dengan foto ulasan pembeli, terutama warna kuah dan isi mangkuknya.",owner_tip:"Foto soto pakai HP dekat jendela, di mangkuk asli tokomu, lengkap dengan pelengkapnya."},
+ en:{checks:{too_uniform:true,waxy_surface:true},verdict:"fake",confidence:"low",level:2,markers:[{label:"very uniform yolks",x:72,y:28},{label:"neatly piled shallots",x:42,y:38},{label:"merging bean sprouts",x:68,y:68}],reason:"The yolks are smooth and identical, the fried shallots sit like a crown, and some bean sprouts seem to merge. The photo no longer looks like the soto a buyer would receive.",layout_font:"There is no menu text or layout in this photo, so the verdict rests on the food alone.",swap_test:"Any soto stall could use this photo. Nothing in the bowl or table belongs to one specific shop.",buyer_tip:"Compare it with buyers' review photos, especially the broth color and what is in the bowl.",owner_tip:"Shoot your soto with a phone near a window, in your shop's own bowl, with its side dishes."}};
 let lang="id";
 try{const s=localStorage.getItem("rofm-lang");if(s==="en"||s==="id")lang=s}catch(e){}
 const $=id=>document.getElementById(id);
@@ -182,10 +191,11 @@ function render(st){const t=T[lang];const ex=st.mode==="example";const d=ex?EXAM
  (Array.isArray(d.markers)?d.markers.slice(0,4):[]).forEach((m,i)=>{const x=Math.max(26,Math.min(70,+m.x||50)),y=Math.max(8,Math.min(92,+m.y||50));const g=document.createElement("span");g.className="tag";g.style.left=x+"%";g.style.top=y+"%";g.textContent=(i+1)+" "+String(m.label||"");ph.append(g)});
  const lv=v==="real"?1:(+d.level===3?3:2);const col=v==="fake"?"var(--fake)":v==="real"?"var(--real)":"var(--ragu)";[...$("meter").children].forEach((s,i)=>s.style.background=i===lv-1&&v!=="notfood"?col:"rgba(0,0,0,.12)");
  $("lvl").textContent=v==="notfood"?"":t.lvl(lv);$("conf").textContent=t.conf(t.cl[d.confidence]||t.cl.medium);
- $("reason").textContent=String(d.reason||"");$("swap").textContent=String(d.swap_test||"");$("buyer").textContent=String(d.buyer_tip||"");$("owner").textContent=String(d.owner_tip||"");
+ $("reason").textContent=String(d.reason||"");$("swap").textContent=String(d.swap_test||"");renderChecks(d,t);$("layout").textContent=String(d.layout_font||"");$("layout").parentElement.hidden=!d.layout_font;$("buyer").textContent=String(d.buyer_tip||"");$("owner").textContent=String(d.owner_tip||"");
  const mk=st.meta.kind;$("metaP").textContent=mk==="ai"?t.m.ai:mk==="c2pa"?t.m.c2pa:mk==="cam"?t.m.cam(st.meta.cam):t.m.none;$("metaBox").hidden=ex;
  $("srcnote").textContent="";
  const er=$("err");if(st.msg){er.hidden=false;er.textContent=st.msg}else er.hidden=true}
+function renderChecks(d,t){const box=$("checkBox");const c=d.checks&&typeof d.checks==="object"?d.checks:null;if(!c||d.is_food===false){box.hidden=true;return}box.hidden=false;const keys=Object.keys(t.cks);const n=keys.filter(k=>c[k]===true).length;$("checkT").textContent=t.checkT(n,keys.length);$("checkNote").textContent=(n===0&&d.verdict==="fake")?t.posterNote:t.rule;const ul=$("checkList");ul.innerHTML="";keys.slice().sort((a,b)=>(c[b]===true)-(c[a]===true)).forEach(k=>{const li=document.createElement("li");if(c[k]===true)li.className="on";const b=document.createElement("b");b.textContent=c[k]===true?"✓":"·";const sp=document.createElement("span");sp.textContent=t.cks[k];li.append(b,sp);ul.append(li)})}
 paint();
 </script>
 
