@@ -127,7 +127,7 @@ const T={
   theoryT:"Teori di baliknya",theoryQ:"Foto menu adalah panggung depan. Makanan yang datang adalah panggung belakang.",again:"Pindai foto lain",
   v:{fake:"Kemungkinan buatan AI",fake2:"Foto sudah banyak dipoles atau diedit",real:"Terlihat seperti foto asli",ragu:"Belum bisa dipastikan",notfood:"Ini bukan foto makanan"},st:{fake:"Fake",real:"Real",ragu:"Ragu"},
   lvl:n=>"Level "+n+" dari 3",conf:c=>"Keyakinan: "+c,cl:{low:"rendah",medium:"sedang",high:"tinggi"},
-  limit:"Alat bantu literasi visual, bukan detektor pasti. Foto yang meragukan dinilai Fake, jadi foto asli yang sangat rapi bisa ikut tertandai. Lihat tingkat keyakinannya. Keputusan akhir tetap di kamu. Foto tidak disimpan. Analisis memakai model AI Claude dari Anthropic.",
+  limit:"Alat bantu literasi visual, bukan detektor pasti. Fake hanya diberikan bila ada tanda yang bisa ditunjuk di foto. Lihat tingkat keyakinannya. Keputusan akhir tetap di kamu. Foto tidak disimpan. Analisis memakai model AI Claude dari Anthropic.",
   ex:"Contoh hasil",busy:"Batas analisis hari ini sudah tercapai. Yang tampil di bawah adalah contoh hasil, bukan analisis fotomu. Coba lagi besok.",fail:"Analisis sedang tidak tersedia. Yang tampil di bawah adalah contoh hasil, bukan analisis fotomu. Coba lagi sebentar lagi.",
   m:{ai:"File ini membawa penanda resmi gambar buatan AI (Content Credentials atau IPTC). Ini tanda kuat.",c2pa:"File ini membawa Content Credentials. Riwayat pembuatannya tercatat di dalam file.",cam:c=>"Ada data kamera: "+c+". Foto langsung dari kamera biasanya membawa data ini.",none:"Tidak ada data kamera. Ini wajar untuk screenshot atau foto yang sudah diunggah ulang, jadi tidak membuktikan apa pun."}},
  en:{h1:"Real or AI?",sub:"Check the menu photo before you order.",only:"Only",stat:"of people feel confident spotting AI-made ads",scan:"Scan a menu photo",pick:"or choose a delivery-app screenshot",scanning:"Scanning",checking:"Checking your photo",
@@ -135,7 +135,7 @@ const T={
   theoryT:"The theory behind it",theoryQ:"The menu photo is the front stage. The food that arrives is the back stage.",again:"Scan another photo",
   v:{fake:"Likely made by AI",fake2:"Heavily edited or retouched photo",real:"Looks like a real photo",ragu:"Can't tell for sure",notfood:"This isn't a food photo"},st:{fake:"Fake",real:"Real",ragu:"Unsure"},
   lvl:n=>"Level "+n+" of 3",conf:c=>"Confidence: "+c,cl:{low:"low",medium:"medium",high:"high"},
-  limit:"A visual literacy aid, not a definitive detector. Doubtful photos are rated Fake, so a very polished real photo can be flagged too. Check the confidence level. The final call is yours. Photos are not stored. Analysis uses the Claude AI model by Anthropic.",
+  limit:"A visual literacy aid, not a definitive detector. Fake is only given when a visible cue can be pointed out. Check the confidence level. The final call is yours. Photos are not stored. Analysis uses the Claude AI model by Anthropic.",
   ex:"Example result",busy:"Today's analysis limit has been reached. Below is an example result, not an analysis of your photo. Try again tomorrow.",fail:"Analysis is unavailable right now. Below is an example result, not an analysis of your photo. Try again shortly.",
   m:{ai:"This file carries an official AI-generated marker (Content Credentials or IPTC). That's a strong signal.",c2pa:"This file carries Content Credentials. Its creation history is recorded inside the file.",cam:c=>"Camera data found: "+c+". Photos straight from a camera usually carry this.",none:"No camera data. That's normal for screenshots and re-uploaded photos, so it proves nothing either way."}}
 };
@@ -176,11 +176,11 @@ function render(st){const t=T[lang];const ex=st.mode==="example";const d=ex?EXAM
  const ph=$("rphoto");ph.querySelectorAll(".tag,.stamp").forEach(n=>n.remove());
  if(ex){ph.querySelector("img").hidden=true;if(!ph.querySelector(".exsvg")){const s=document.createElement("div");s.className="exsvg";s.style.cssText="width:100%;height:100%";s.innerHTML=food;ph.prepend(s)}}else{ph.querySelector("img").hidden=false;const s=ph.querySelector(".exsvg");if(s)s.remove()}
  $("exampleTag").innerHTML=ex?'<span class="example"></span>':"";if(ex)$("exampleTag").firstChild.textContent=t.ex;
- const v=d.is_food===false?"notfood":(d.verdict==="real"?"real":"fake");
+ const v=d.is_food===false?"notfood":(d.verdict==="fake"?"fake":"real");
  $("vtext").textContent=(v==="fake"&&+d.level!==3)?t.v.fake2:t.v[v];
  if(v!=="notfood"){const sp=document.createElement("div");sp.className="stamp";sp.textContent=t.st[v];sp.style.color=v==="fake"?"var(--fake)":v==="real"?"var(--real)":"var(--ragu)";ph.append(sp)}
  (Array.isArray(d.markers)?d.markers.slice(0,4):[]).forEach((m,i)=>{const x=Math.max(26,Math.min(70,+m.x||50)),y=Math.max(8,Math.min(92,+m.y||50));const g=document.createElement("span");g.className="tag";g.style.left=x+"%";g.style.top=y+"%";g.textContent=(i+1)+" "+String(m.label||"");ph.append(g)});
- const lv=[1,2,3].includes(+d.level)?+d.level:2;const col=v==="fake"?"var(--fake)":v==="real"?"var(--real)":"var(--ragu)";[...$("meter").children].forEach((s,i)=>s.style.background=i===lv-1&&v!=="notfood"?col:"rgba(0,0,0,.12)");
+ const lv=v==="real"?1:(+d.level===3?3:2);const col=v==="fake"?"var(--fake)":v==="real"?"var(--real)":"var(--ragu)";[...$("meter").children].forEach((s,i)=>s.style.background=i===lv-1&&v!=="notfood"?col:"rgba(0,0,0,.12)");
  $("lvl").textContent=v==="notfood"?"":t.lvl(lv);$("conf").textContent=t.conf(t.cl[d.confidence]||t.cl.medium);
  $("reason").textContent=String(d.reason||"");$("swap").textContent=String(d.swap_test||"");$("buyer").textContent=String(d.buyer_tip||"");$("owner").textContent=String(d.owner_tip||"");
  const mk=st.meta.kind;$("metaP").textContent=mk==="ai"?t.m.ai:mk==="c2pa"?t.m.c2pa:mk==="cam"?t.m.cam(st.meta.cam):t.m.none;$("metaBox").hidden=ex;
